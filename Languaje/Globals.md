@@ -19,25 +19,25 @@ require(tx.time >= <expression>);
 >
 >To access the value of the ``nLocktime`` field for assignment, use the ``tx.locktime`` introspection variable.
 
-Because of the way time locks work, a corresponding time lock needs to be added to the transaction. The CashScript SDK automatically sets this transaction level time lock to the most recent block number, as this is the most common use case. If you need to use a different block number or timestamp, this should be passed into the CashScript SDK using the ``withTime()`` function. If the default matches your use case, no additional actions are required.
+Because of the way time locks work, **a corresponding time lock needs to be added to the transaction**. This can be done with the CashScript SDK by calling ``setLocktime()`` on the ``TransactionBuilder`` instance.
 
-### tx.age
+### this.age
 
-``tx.age`` is used to create relative time locks. The value of tx.age can either represent a number of blocks, or a number of chunks, which are 512 seconds. The corresponding transaction level time lock determines which of the two options is used.
+``this.age`` is used to create *relative* time lock on a UTXO. The value of ``this.age`` can either represent a number of blocks, or a number of *chunks*, which are 512 seconds. The corresponding *transaction level* time lock determines which of the two options is used.
 
-``tx.age`` corresponds to the ``nSequence`` field of the current UTXO using the ``OP_CHECKSEQUENCEVERIFY`` opcode. Because of this ``tx.age`` can only be used in the following way:
+``this.age`` corresponds to the ``nSequence`` field of the current evaluated *UTXO* using the ``OP_CHECKSEQUENCEVERIFY`` opcode. Because of this ``this.age`` can only be used in the following way:
 
-``require(tx.age >= <expression>);``
+``require(this.age >= <expression>);``
 
 >**NOTE**
 >
->To access the value of the ``nSequence`` field for assignment, use the ``tx.inputs[i].sequenceNumber`` introspection variable.
+>To access the value of the ``nSequence`` field for variable assignment, use the [``sequenceNumber`` introspection variable](#txinputsisequencenumber).
 
-Because of the way time locks work, a corresponding time lock needs to be added to the transaction. This can be done in the CashScript SDK using the ``withAge()`` function. However, the value passed into this function will always be treated as a number of blocks, so it is currently not supported to use ``tx.age`` as a number of second chunks.
+Because of the way time locks work, **a corresponding time lock needs to be added to the transaction**. This can be done in the CashScript SDK through ``addInput()`` by passing the ``sequence`` as optional argument. However, the value passed into this function will always be treated as a number of blocks, so it **is currently not supported to use ``this.age`` as a number of second chunks**.
 
 ## Introspection variables
 
-Introspection functionality is used to create covenant contracts. Covenants are a technique used to put constraints on spending the money inside a smart contract. The main use case of this is limiting the addresses where money can be sent and the amount sent. To explore the possible uses of covenants inside smart contracts, read the [CashScript Covenants Guide](/Guides/Covenants.md).
+Introspection functionality is used to create *covenant* contracts. Covenants are a technique used to put constraints on spending the money inside a smart contract. The main use case of this is limiting the addresses where money can be sent and the amount sent. To explore the possible uses of covenants inside smart contracts, read the [CashScript Covenants Guide](/Guides/Covenants.md).
 
 ### this.activeInputIndex
 
@@ -65,7 +65,7 @@ Represents the ``nLocktime`` field of the transaction. This is similar to the ``
 
 >**TIP**
 >
->The use case for tx.locktime is to read the nLocktime value and add to the local state. Example usage for this is demonstrated in the [Sablier example](https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki).
+>The use case for ``tx.locktime`` is to read the ``nLocktime`` value and add to the local state. Example usage for this is demonstrated in the [Sablier example](https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki).
 
 ### tx.inputs
 
@@ -111,17 +111,17 @@ Represents the outpoint index where a specific input was initially locked.
 
 ``int tx.inputs[i].sequenceNumber``
 
-Represents the ``nSequence`` number of a specific input.
+Represents the ``nSequence`` number of a specific input. This value of the input's ``sequenceNumber`` is only consensus-enforced as a relative timelock when using transaction version 2.
 
 #### tx.inputs[i].tokenCategory
 
 ``bytes tx.inputs[i].tokenCategory``
 
-Represents the ``tokenCategory`` of a specific input. Returns 0 when that specific input contains no tokens. When the input contains an NFT with a capability, the 32-byte ``tokenCategory`` is concatenated together with ``0x01`` for a mutable NFT and ``0x02`` for a minting NFT.
+Represents the ``tokenCategory`` of a specific input. Returns ``0x`` when that specific input contains no tokens. When the input contains an NFT with a capability, the 32-byte ``tokenCategory`` is concatenated together with ``0x01`` for a mutable NFT and ``0x02`` for a minting NFT.
 
->**NOTE**
+>**CAUTION**
 >
->The ``tokenCategory`` is returned in the original unreversed order. Explorers and wallets change the byte order by default but for CashScript you need >to be careful to use the unreversed order.
+>The ``tokenCategory`` introspection variable returns the tokenCategory in the original unreversed order, this is unlike wallets and explorers which use the reversed byte-order. So be careful about the byte-order of ``tokenCategory`` when working with BCH smart contracts.
 
 #### tx.inputs[i].nftCommitment
 
@@ -133,7 +133,7 @@ Represents the NFT commitment data of a specific input.
 
 ``int tx.inputs[i].tokenAmount``
 
-Represents the amount of fungible tokens of a specific input.
+Represents the amount of fungible tokens of a specific input. Maximum size for a ``tokenAmount`` is a 64-bit integer.
 
 ### tx.outputs
 
@@ -161,11 +161,11 @@ Represents the locking bytecode (``scriptPubKey``) of a specific output.
 
 ``bytes tx.output[i].tokenCategory``
 
-Represents the ``tokenCategory`` of a specific output. Returns 0 when that specific output contains no tokens. When the output contains an NFT with a capability, the 32-byte ``tokenCategory`` is concatenated together with ``0x01`` for a mutable NFT and ``0x02`` for a minting NFT.
+Represents the ``tokenCategory`` of a specific output. Returns ``0x`` when that specific output contains no tokens. When the output contains an NFT with a capability, the 32-byte ``tokenCategory`` is concatenated together with ``0x01`` for a mutable NFT and ``0x02`` for a minting NFT.
 
->**NOTE**
+>**CAUTION**
 >
->The ``tokenCategory`` is returned in the original unreversed order. Explorers and wallets change the byte order by default but for CashScript you need >to be careful to use the unreversed order.
+>The ``tokenCategory`` introspection variable returns the tokenCategory in the original unreversed order, this is unlike wallets and explorers which use the reversed byte-order. So be careful about the byte-order of ``tokenCategory`` when working with BCH smart contracts.
 
 #### tx.output[i].nftCommitment
 
@@ -177,7 +177,7 @@ Represents the NFT commitment data of a specific output.
 
 ``int tx.output[i].tokenAmount``
 
-Represents the amount of fungible tokens of a specific output.
+Represents the amount of fungible tokens of a specific output. Maximum size for a ``tokenAmount`` is a 64-bit integer.
 
 ## Constructing locking bytecode
 
@@ -187,7 +187,7 @@ One of the main use cases of covenants is enforcing transaction outputs (where m
 
 ```javascript
 bytes25 lockingBytecode = new LockingBytecodeP2PKH(pkh);
-int value = 10000;
+int value = 10_000;
 require(tx.outputs[0].lockingBytecode == lockingBytecode);
 require(tx.outputs[0].value == value);
 ```
@@ -206,7 +206,7 @@ Creates new P2SH20 locking bytecode for the script hash, where ``scriptHash`` is
 
 >**CAUTION**
 >
->Because the old P2SH20 addresses use hashes which are only 20-bytes in length, they are vulnerable to hash collision in situations where an attacker >can introduce arbitrary data to a contract. To solve these security issues P2SH32 has been introduced. It is recommended to always use >``LockingBytecodeP2SH32`` from now on.
+>Because the old P2SH20 addresses use hashes which are only 20-bytes in length, they are vulnerable to hash collision in situations where an attacker can introduce arbitrary data to a contract. To solve these security issues P2SH32 has been introduced. It is recommended to always use ``LockingBytecodeP2SH32`` from now on.
 
 ### LockingBytecodeP2SH32
 
@@ -219,6 +219,10 @@ Creates new P2SH32 locking bytecode for the script hash, where ``scriptHash`` is
 ``new LockingBytecodeNullData(bytes[] chunks): bytes``
 
 Creates new OP_RETURN locking bytecode with ``chunks`` as its OP_RETURN data.
+
+>**NOTE**
+>
+>``LockingBytecodeNullData`` outputs are provably unspendable, so any BCH sent there would be burned. For these outputs no dust-minimum is enforced so often ``LockingBytecodeNullData`` outputs have 0 BCH on them.
 
 ## Globally available units
 
@@ -237,11 +241,12 @@ require(1 bits == 100);
 require(1 bitcoin == 1e8);
 ```
 
-Time Units
+### Time Units
+
 The units ``seconds``, ``minutes``, ``hours``, ``days`` and ``weeks`` can be used to denote time.
 
 **CAUTION**
->Be careful when using these units in precise calendar calculations though, because not every year equals 365 days and not even every minute has 60 seconds because of leap seconds.
+>Be careful when using these units in precise calendar calculations though, because not every year equals 365 days and not even every minute has 60 seconds because of [leap seconds](https://en.wikipedia.org/wiki/Leap_second).
 
 ##### Example
 

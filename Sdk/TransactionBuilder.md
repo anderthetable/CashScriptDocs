@@ -1,18 +1,22 @@
-# Advanced Transaction Builder
+# Transaction Builder
 
-With the introduction of newer smart contract features to BCH, such as native introspection and CashTokens, we've seen use cases for combining UTXOs of multiple different smart contracts within a single transaction — such as [Fex](https://github.com/fex-cash/fex). The [simple transaction builder](/Sdk/Transactions.md) only operates on a single smart contract. To support more advanced use cases, you can use the Advanced Transaction Builder.
+The CashScript Transaction Builder generalizes transaction building to allow for complex transactions combining multiple different smart contracts within a single transaction or to create basic P2PKH transactions. The Transaction Builder works by adding inputs and outputs to fully specify the transaction shape.
 
-The Advanced Transaction Builder supports adding UTXOs from any number of different smart contracts and P2PKH UTXOs. While the simplified transaction builder automatically selects UTXOs for you and adds change outputs, the advanced transaction builder requires you to provide the UTXOs yourself and manage change carefully.
+For the documentation for the old and deprecated transaction builder API, refer to [this docs page instead](/Sdk/Transactions.md).
+
+>**INFO**
+>
+>Defining the inputs and outputs requires careful consideration because the difference in Bitcoin Cash value between in- and outputs is what's paid in transaction fees to the miners.
 
 ## Instantiating a transaction builder
 
-```Typescript
+```javascript
 new TransactionBuilder(options: TransactionBuilderOptions)
 ```
 
 To start, you need to instantiate a transaction builder and pass in a ``NetworkProvider`` instance.
 
-```Typescript
+```javascript
 interface TransactionBuilderOptions {
   provider: NetworkProvider;
 }
@@ -20,18 +24,18 @@ interface TransactionBuilderOptions {
 
 #### Example
 
-```Typescript
+```javascript
 import { ElectrumNetworkProvider, TransactionBuilder, Network } from 'cashscript';
 
 const provider = new ElectrumNetworkProvider(Network.MAINNET);
 const transactionBuilder = new TransactionBuilder({ provider });
 ```
 
-## Transaction options
+## Transaction Building
 
 ### addInput()
 
-```Typescript
+```javascript
 transactionBuilder.addInput(utxo: Utxo, unlocker: Unlocker, options?: InputOptions): this
 ```
 
@@ -39,11 +43,11 @@ Adds a single input UTXO to the transaction that can be unlocked using the provi
 
 >**NOTE**
 >
->It is possible to create custom unlockers by implementing the ``Unlocker`` interface. Most use cases are covered by the ``SignatureTemplate`` and ``Contract`` classes.
+>It is possible to create custom unlockers by implementing the ``Unlocker`` interface. Most use cases however are covered by the ``SignatureTemplate`` and ``Contract`` classes.
 
 #### Example
 
-```Typescript
+```javascript
 import { contract, aliceTemplate, aliceAddress, transactionBuilder } from './somewhere.js';
 
 const contractUtxos = await contract.getUtxos();
@@ -55,12 +59,12 @@ transactionBuilder.addInput(aliceUtxos[0], aliceTemplate.unlockP2PKH());
 
 ### addInputs()
 
-```Typescript
+```javascript
 transactionBuilder.addInputs(utxos: Utxo[], unlocker: Unlocker, options?: InputOptions): this
 transactionBuilder.addInputs(utxos: UnlockableUtxo[]): this
 ```
 
-```Typescript
+```javascript
 interface UnlockableUtxo extends Utxo {
   unlocker: Unlocker;
   options?: InputOptions;
@@ -71,7 +75,7 @@ Adds a list of input UTXOs, either with a single shared unlocker or with individ
 
 #### Example
 
-```Typescript
+```javascript
 import { contract, aliceTemplate, aliceAddress, transactionBuilder } from './somewhere.js';
 
 const contractUtxos = await contract.getUtxos();
@@ -91,14 +95,14 @@ transactionBuilder.addInputs(unlockableUtxos);
 
 ### addOutput() & addOutputs()
 
-```Typescript
+```javascript
 transactionBuilder.addOutput(output: Output): this
 transactionBuilder.addOutputs(outputs: Output[]): this
 ```
 
 Adds a single output or a list of outputs to the transaction.
 
-```Typescript
+```javascript
 interface Output {
   to: string | Uint8Array;
   amount: bigint;
@@ -117,7 +121,7 @@ interface TokenDetails {
 
 #### Example
 
-```Typescript
+```javascript
 import { aliceAddress, bobAddress, transactionBuilder, tokenCategory } from './somewhere.js';
 
 transactionBuilder.addOutput({
@@ -137,7 +141,7 @@ transactionBuilder.addOutputs([
 
 ### addOpReturnOutput()
 
-```Typescript
+```javascript
 transactionBuilder.addOpReturnOutput(chunks: string[]): this
 ```
 
@@ -145,14 +149,14 @@ Adds an OP_RETURN output to the transaction with the provided data chunks in str
 
 #### Example
 
-```Typescript
+```javascript
 // Post "Hello World!" to memo.cash
 transactionBuilder.addOpReturnOutput(['0x6d02', 'Hello World!']);
 ```
 
 ### setLocktime()
 
-```Typescript
+```javascript
 transactionBuilder.setLocktime(locktime: number): this
 ```
 
@@ -160,36 +164,36 @@ Sets the locktime for the transaction to set a transaction-level absolute timelo
 
 #### Example
 
-```Typescript
+```javascript
 // Set locktime one day from now
 transactionBuilder.setLocktime(((Date.now() / 1000) + 24 * 60 * 60) * 1000);
 ```
 
 ### setMaxFee()
 
-```Typescript
+```javascript
 transactionBuilder.setMaxFee(maxFee: bigint): this
 ```
 
-Sets a max fee for the transaction. Because the advanced transaction builder does not automatically add a change output, you can set a max fee as a safety measure to make sure you don't accidentally pay too much in fees. If the transaction fee exceeds the max fee, an error will be thrown when building the transaction.
+Sets a max fee for the transaction. Because the transaction builder does not automatically add a change output, you can set a max fee as a safety measure to make sure you don't accidentally pay too much in fees. If the transaction fee exceeds the max fee, an error will be thrown when building the transaction.
 
 #### Example
 
-```Typescript
+```javascript
 transactionBuilder.setMaxFee(1000n);
 ```
 
-## Transaction building
+## Completing the Transaction
 
 ### send()
 
-```Typescript
+```javascript
 async transactionBuilder.send(): Promise<TransactionDetails>
 ```
 
 After completing a transaction, the ``send()`` function can be used to send the transaction to the BCH network. An incomplete transaction cannot be sent.
 
-```Typescript
+```javascript
 interface TransactionDetails {
   inputs: Uint8Array[];
   locktime: number;
@@ -202,7 +206,7 @@ interface TransactionDetails {
 
 #### Example
 
-```Typescript
+```javascript
 import { aliceTemplate, aliceAddress, bobAddress, contract, provider } from './somewhere.js';
 
 const contractUtxos = await contract.getUtxos();
@@ -219,15 +223,15 @@ const txDetails = await new TransactionBuilder({ provider })
 
 ### build()
 
-```Typescript
+```javascript
 transactionBuilder.build(): string
 ```
 
-After completing a transaction, the ``build()`` function can be used to build the entire transaction and return the signed transaction hex string. This can then be imported into other libraries or applications as necessary.
+After completing a transaction, the build() function can be used to build the entire transaction and return the signed transaction hex string. This can then be imported into other libraries or applications as necessary.
 
 #### Example
 
-```Typescript
+```javascript
 import { aliceTemplate, aliceAddress, bobAddress, contract, provider } from './somewhere.js';
 
 const contractUtxos = await contract.getUtxos();
@@ -242,6 +246,95 @@ const txHex = new TransactionBuilder({ provider })
   .build()
 ```
 
+### debug()
+
+```javascript
+transactionBuilder.debug(): DebugResult
+```
+
+If you want to debug a transaction locally instead of sending it to the network, you can call the ``debug()`` function on the transaction. This will return intermediate values and the final result of the transaction. It will also show any logged values and ``require`` error messages.
+
+### bitauthUri()
+
+```javascript
+transactionBuilder.bitauthUri(): string
+```
+
+If you prefer a lower-level debugging experience, you can call the ``bitauthUri()`` function on the transaction. This will return a URI that can be opened in the BitAuth IDE. This URI is also displayed in the console whenever a transaction fails. You can read more about debugging transactions on the [debugging page](/Guides/Debugging.md).
+
+>**CAUTION**
+>
+>It is unsafe to debug transactions on mainnet using the BitAuth IDE as private keys will be exposed to BitAuth IDE and transmitted over the network.
+
+### generateWcTransactionObject()
+
+```javascript
+transactionBuilder.generateWcTransactionObject(options?: WcTransactionOptions): WcTransactionObject
+```
+
+Generates a ``WcTransactionObject`` that can be used to sign a transaction with a WalletConnect client. It accepts an optional ``WcTransactionOptions`` object to customize the transaction object with custom ``broadcast`` and ``userPrompt`` properties.
+
+```javascript
+import type { TransactionCommon, Input, Output } from '@bitauth/libauth';
+import type { AbiFunction, Artifact } from 'cashscript';
+
+interface WcTransactionOptions {
+  broadcast?: boolean;
+  userPrompt?: string;
+}
+
+interface WcTransactionObject {
+  transaction: TransactionCommon | string;
+  sourceOutputs: WcSourceOutput[];
+  broadcast?: boolean;
+  userPrompt?: string;
+}
+
+type WcSourceOutput = Input & Output & WcContractInfo;
+
+interface WcContractInfo {
+  contract?: {
+    abiFunction: AbiFunction;
+    redeemScript: Uint8Array;
+    artifact: Partial<Artifact>;
+  }
+}
+```
+
+>**TIP**
+>
+>See the [WalletConnect guide](/Guides/WalletConnect.md) for more information on how to use the ``WcTransactionObject`` with a WalletConnect client.
+
+#### Example
+
+```javascript
+import { aliceAddress, contract, provider, signWcTransaction } from './somewhere.js';
+import { TransactionBuilder, placeholderP2PKHUnlocker, placeholderPublicKey, placeholderSignature } from 'cashscript';
+
+const contractUtxos = await contract.getUtxos();
+const aliceUtxos = await provider.getUtxos(aliceAddress);
+
+// Use placeholder variables which will be replaced by the user's wallet when signing the transaction with WalletConnect
+const placeholderUnlocker = placeholderP2PKHUnlocker(aliceAddress);
+const placeholderPubKey = placeholderPublicKey();
+const placeholderSig = placeholderSignature();
+
+// use the CashScript SDK to construct a transaction
+const transactionBuilder = new TransactionBuilder({ provider })
+  .addInput(contractUtxos[0], contract.unlock.spend(placeholderPubKey, placeholderSig))
+  .addInput(aliceUtxos[0], placeholderUnlocker)
+  .addOutput({ to: aliceAddress, amount: 100_000n });
+
+// Generate WalletConnect transaction object with custom 'broadcast' and 'userPrompt' options
+const wcTransactionObj = transactionBuilder.generateWcTransactionObject({
+  broadcast: true,
+  userPrompt: "Example Contract transaction",
+});
+
+// Pass wcTransactionObj to WalletConnect client (see WalletConnect guide for more details)
+const signResult = await signWcTransaction(wcTransactionObj);
+```
+
 ## Transaction errors
 
-Transactions can fail for a number of reasons. Refer to the [Transaction Errors](/Sdk/Transactions.md) section of the simplified transaction builder documentation for more information. Note that the advanced transaction builder does not yet support the ``FailedRequireError`` mentioned in the simplified transaction builder documentation so any error will be of type ``FailedTransactionError`` and include any of the mentioned error reasons in its message.
+Transactions can fail for a number of reasons. Refer to the Transaction Errors section of the simplified transaction builder documentation for more information. Note that the transaction builder does not yet support the ``FailedRequireError`` mentioned in the simplified transaction builder documentation so any error will be of type ``FailedTransactionError`` and include any of the mentioned error reasons in its message.

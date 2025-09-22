@@ -6,36 +6,38 @@ Bitcoin covenants were first proposed in a paper titled [Bitcoin Covenants](http
 
 ## Accessible introspection data
 
-When using CashScript, you can access a lot of introspection data that can be used to inspect and constrain transaction details, such as inputs and outputs.
+When using CashScript, you can access a lot of *introspection data* that can be used to inspect and constrain transaction details, such as inputs and outputs.
 
-- int this.activeInputIndex - Index of the input that is currently under evaluation during transaction validation.
-- bytes this.activeBytecode - Contract bytecode of the input that is currently under evaluation during transaction validation.
-- int tx.version - Version of the transaction.
-- int tx.locktime - nLocktime field of the transaction.
-- int tx.inputs.length - Number of inputs in the transaction.
-- int tx.inputs[i].value - Value of a specific input (in satoshis).
-- bytes tx.inputs[i].lockingBytecode - Locking bytecode (scriptPubKey) of a specific input.
-- bytes tx.inputs[i].unlockingBytecode - Unlocking bytecode (scriptSig) of a specific input.
-- bytes32 tx.inputs[i].outpointTransactionHash - Outpoint transaction hash of a specific input.
+- ``int this.activeInputIndex`` - Index of the input that is currently under evaluation during transaction validation.
+- ``bytes this.activeBytecode`` - Contract bytecode of the input that is currently under evaluation during transaction validation.
+- ``int tx.version`` - Version of the transaction.
+- ``int tx.locktime`` - ``nLocktime`` field of the transaction.
+- ``int tx.inputs.length`` - Number of inputs in the transaction.
+- ``int tx.inputs[i].value`` - Value of a specific input (in satoshis).
+- ``bytes tx.inputs[i].lockingBytecode`` - Locking bytecode (``scriptPubKey``) of a specific input.
+- ``bytes tx.inputs[i].unlockingBytecode`` - Unlocking bytecode (``scriptSig``) of a specific input.
+- ``bytes32 tx.inputs[i].outpointTransactionHash`` - Outpoint transaction hash of a specific input.
 - int tx.inputs[i].outpointIndex - Outpoint index of a specific input.
-- int tx.inputs[i].sequenceNumber - nSequence number of a specific input.
-- bytes tx.inputs[i].tokenCategory - tokenCategory + tokenCapability of a specific input.
-- bytes tx.inputs[i].nftCommitment - NFT commitment data of a specific input.
-- int tx.inputs[i].tokenAmount - Amount of fungible tokens of a specific input.
-- int tx.outputs.length - Number of outputs in the transaction.
-- int tx.outputs[i].value - Value of a specific output (in satoshis).
-- bytes tx.outputs[i].lockingBytecode - Locking bytecode (scriptPubKey) of a specific output.
-- bytes tx.outputs[i].tokenCategory - tokenCategory + tokenCapability of a specific output.
-- bytes tx.outputs[i].nftCommitment - NFT commitment data of a specific output
-- int tx.outputs[i].tokenAmount - Amount of fungible tokens of a specific output.
+- ``int tx.inputs[i].sequenceNumber`` - ``nSequence`` number of a specific input.
+- ``bytes tx.inputs[i].tokenCategory`` - ``tokenCategory`` + ``tokenCapability`` of a specific input.
+- ``bytes tx.inputs[i].nftCommitment`` - NFT commitment data of a specific input.
+- ``int tx.inputs[i].tokenAmount`` - Amount of fungible tokens of a specific input.
+- ``int tx.outputs.length`` - Number of outputs in the transaction.
+- ``int tx.outputs[i].value`` - Value of a specific output (in satoshis).
+- ``bytes tx.outputs[i].lockingBytecode`` - Locking bytecode (``scriptPubKey``) of a specific output.
+- ``bytes tx.outputs[i].tokenCategory`` - ``tokenCategory`` + ``tokenCapability`` of a specific output.
+- ``bytes tx.outputs[i].nftCommitment`` - NFT commitment data of a specific output
+- ``int tx.outputs[i].tokenAmount`` - Amount of fungible tokens of a specific output.
 
 ## Using introspection data
+
 While we know the individual data fields, it's not immediately clear how this can be used to create useful smart contracts on Bitcoin Cash. However, there are several constraints that can be created using these fields — most important of which are constraints on the recipients of funds — so that is what we discuss.
 
 ### Restricting P2PKH recipients
-One interesting technique in Bitcoin Cash is called blind escrow, meaning that funds are placed in an escrow contract. This contract can only release the funds to one of the escrow participants, and has no other control over the funds. Non-custodial local exchange [LocalCryptos](https://localcryptos.com/) used ``OP_CHECKDATASIG`` to do this. We can achieve something similar by restricting recipients with a covenant.
 
-```Typescript
+One interesting technique in Bitcoin Cash is called blind escrow, meaning that funds are placed in an escrow contract. This contract can only release the funds to one of the escrow participants, and has no other control over the funds. We can implement this blind escrow as a covenants by restricting the possible recipients (although there are other possible designs for escrows).
+
+```javascript
 contract Escrow(bytes20 arbiter, bytes20 buyer, bytes20 seller) {
     function spend(pubkey pk, sig s) {
         require(hash160(pk) == arbiter);
@@ -64,10 +66,10 @@ Besides sending money to ``P2PKH`` addresses, it is also possible to send money 
 
 This is especially effective when used together with time constraints. An example is the *Licho's Last Will* contract. This contract puts a dead man's switch on the contract's holdings, and requires the owner to send a heartbeat to the contract every six months. If the contract hasn't received this heartbeat, an inheritor can claim the funds instead.
 
-```Typescript
+```javascript
 contract LastWill(bytes20 inheritor, bytes20 cold, bytes20 hot) {
     function inherit(pubkey pk, sig s) {
-        require(tx.age >= 180 days);
+        require(this.age >= 180 days);
         require(hash160(pk) == inheritor);
         require(checkSig(s, pk));
     }
@@ -99,10 +101,10 @@ This contract has three functions, but only the ``refresh()`` function uses a co
 
 The earlier examples showed sending money to only a single output of either ``P2PKH`` or ``P2SH``. But there's nothing preventing us from writing a contract that can send to multiple outputs, including a combination of ``P2PKH`` and ``P2SH`` outputs. A good example is the *Licho's Mecenas* contract that allows you to set up recurring payments where the recipient is able to claim the same amount every month, while the remainder has to be sent back to the contract.
 
-```Typescript
+```javascript
 contract Mecenas(bytes20 recipient, bytes20 funder, int pledge, int period) {
     function receive() {
-        require(tx.age >= period);
+        require(this.age >= period);
 
         // Check that the first output sends to the recipient
         bytes25 recipientLockingBytecode = new LockingBytecodeP2PKH(recipient);
@@ -133,7 +135,7 @@ contract Mecenas(bytes20 recipient, bytes20 funder, int pledge, int period) {
 }
 ```
 
-This contract applies similar techniques as the previous two examples to verify the signature, although in this case it does not matter who the ``signer`` of the transaction is. Since the outputs are restricted with covenants, there is **no way** someone could call this function to send money **anywhere but to the correct outputs**.
+This contract applies similar techniques as the previous two examples to verify the signature, although in this case it does not matter who the *signer* of the transaction is. Since the outputs are restricted with covenants, there is **no way** someone could call this function to send money **anywhere but to the correct outputs**.
 
 ## Local State
 
@@ -145,11 +147,14 @@ Smart contracts which persist for multiple transactions might want to keep data 
 
 ### Keeping local State in NFTs
 
-To demonstrate the concept of 'local state' we consider the Mecenas contract again, and focus on a drawback of this contract: you have to claim the funds at exactly the right moment or you're leaving money on the table. Every time you claim money from the contract, the ``tx.age`` counter is reset, so the next claim is possible 30 days after the previous claim. So if we wait a few days to claim, **these days are basically wasted**.
+To demonstrate the concept of 'local state' we consider the Mecenas contract again, and focus on a drawback of this contract: you have to claim the funds at exactly the right moment or you're leaving money on the table. Every time you claim money from the contract, the ``this.age`` counter is reset, so the next claim is possible 30 days after the previous claim. So if we wait a few days to claim, **these days are basically wasted**.
 
 Besides these wasted days it can also be inconvenient to claim at set intervals, rather than the "streaming" model that the Ethereum project [Sablier](https://www.sablier.finance/) employs. Instead of set intervals, you should be able to claim funds at any time during the "money stream". Using local state, we can approach a similar system with BCH.
 
-```Typescript
+```javascript
+// Mutable NFT Commitment contract state
+// bytes8 latestLockTime
+
 contract StreamingMecenas(
     bytes20 recipient,
     bytes20 funder,
@@ -220,7 +225,7 @@ Technically this happens by minting a new NFT, with in the commitment field the 
 
 Let's take a look at an example contract called ``PooledFunds`` which has two contract functions: ``addFunds`` and ``withdrawFunds``
 
-```Typescript
+```jaavscript
 contract PooledFunds(
 ) {
     function addFunds(
@@ -234,18 +239,20 @@ contract PooledFunds(
         int amountSatsAdded = tx.outputs[0].value - tx.inputs[0].value;
         int amountTokensAdded = tx.outputs[0].tokenAmount - tx.inputs[0].tokenAmount;
 
+        // Require either BCH or fungible tokens to contributed, not both at once
+        require(amountSatsAdded == 0 || amountTokensAdded == 0);
+
         // Determine whether BCH or fungible tokens were contributed to the pool
-        bytes actionIdentifier = 0x00;
+        bytes receiptCommitment = 0x;
         if (amountTokensAdded > 0) {
             // Require 1000 sats to pay for future withdrawal fee
             require(amountSatsAdded == 1000);
-            actionIdentifier = 0x01;
-            actionIdentifier = actionIdentifier + bytes8(amountTokensAdded);
+            receiptCommitment = 0x01 + bytes8(amountTokensAdded);
         } else {
             // Place a minimum on the amount of funds that can be added
             // Implicitly requires tx.outputs[0].value > tx.inputs[0].value
             require(amountSatsAdded > 10000);
-            actionIdentifier = actionIdentifier + bytes8(amountSatsAdded);
+            receiptCommitment = 0x00 + bytes8(amountSatsAdded);
         }
 
         // Require there to be at most three outputs so no additional NFTs can be minted
@@ -259,7 +266,7 @@ contract PooledFunds(
         // The receipt NFT is sent back to the same address of the first user's input
         // The NFT commitment of the receipt contains what was added to the pool
         require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);
-        require(tx.outputs[1].nftCommitment == actionIdentifier);
+        require(tx.outputs[1].nftCommitment == receiptCommitment);
 
         // A 3rd output for change is allowed
         if (tx.outputs.length == 3) {
@@ -281,7 +288,7 @@ contract PooledFunds(
 
         // Read the amount that was contributed to the pool from the NFT commitment
         bytes ntfCommitmentData = tx.inputs[1].nftCommitment;
-        bytes actionIdentifier, bytes amountToWithdrawBytes = ntfCommitmentData.split(2);
+        bytes actionIdentifier, bytes amountToWithdrawBytes = ntfCommitmentData.split(1);
         int amountToWithdraw = int(amountToWithdrawBytes);
 
         if (actionIdentifier == 0x01) {

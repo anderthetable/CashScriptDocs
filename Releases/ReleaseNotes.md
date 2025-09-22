@@ -1,5 +1,81 @@
 # Release Notes
 
+## v0.11.5
+
+### CashScript SDK
+
+- ✨ Include input index in console.log statements for debugging.
+- ✨ Improve type inference for function and constructor arguments in the Contract class.
+- 🛠️ Replace redundant dependencies.
+- 🐛 Remove accidental dependency inclusion of @types/node.
+
+## v0.11.4
+
+### CashScript SDK
+
+- ✨ Add updateUtxoSet option to MockNetworkProvider to allow for updating the UTXO set after a transaction is sent.
+- 🐛 Fix bug where sending P2PKH-only transactions would throw No placeholder scenario ID or script ID found.
+
+## v0.11.3
+
+### cashc compiler
+- ✨ Add .slice(start, end) operator for bytes and strings.
+- ✨ Add bounded bytes typing and bounds checking for .split() (includes checking for negative indices).
+- 🐎 Add optimisation for .slice(0, x) and .slice(x, y.length) (also applies to .split(0)[1]).
+- 🐛 Disallow incorrect bounded bytes typing when using .split().
+CashScript SDK
+- 🐛 Fix bug with where ElectrumNetworkProvider would disconnect in browser on visibility change of the page.
+
+## v0.11.2
+
+### CashScript SDK
+- 🐛 Fix bug with new generateWcTransactionObject() throwing when using placeholderP2PKHUnlocker().
+
+## v0.11.1
+
+### CashScript SDK
+- ✨ Add generateWcTransactionObject() method to TransactionBuilder to generate a WcTransactionObject that can be used to sign a transaction with a WalletConnect client.
+- ✨ Add placeholderSignature(), placeholderPublicKey() and placeholderP2PKHUnlocker() helper functions to the SDK for WalletConnect usage.
+https://x.com/CashScriptBCH/status/1942513305420968238
+
+## v0.11.0
+
+This update adds CashScript support for the new BCH 2025 network upgrade. To read more about the upgrade, see this blog post.
+
+This release also contains several breaking changes, please refer to the migration notes for more information.
+
+### cashc compiler
+
+- 🐛 Fix bug where source code in --format ts artifacts used incorrect quotation marks.
+- 🛠️ Remove warning for opcount and update warning for byte size to match new limits.
+- 💥 BREAKING: tx.age was renamed to this.age to better reflect that it enforces a UTXO-level locktime check (not transaction-level).
+- 💥 BREAKING: The entire debug object on the artifact is reworked to enable debugging the optimised contract bytecode.
+
+### CashScript SDK
+
+- ✨ Add debugging capabilities to the TransactionBuilder.
+transaction.debug() & transaction.bitauthUri()
+Output BitAuth IDE URI for debugging when transaction is rejected.
+Libauth template generation and debugging for multi-contract transactions
+- ✨ Debugging now supports using the optimised contract bytecode (when compiled with cashc@0.11.0 or later).
+- ✨ Add setBlockHeight() method to MockNetworkProvider
+- ✨ Config-free usage of the CashScript SDK with Vite or Webpack
+- 🛠️ Update debug tooling to use the new BCH_2025_05 instruction set.
+- 🛠️ Deprecate the simple transaction builder. You can still use the simple transaction builder with the current SDK, but this support will be removed in a future release
+- 💥 BREAKING: the Jest utilities for automated testing are now synchronous and no longer work with the deprecated simple transaction builder
+expect(transaction).toLog(message)
+expect(transaction).toFailRequire()
+expect(transaction).toFailRequireWith(message)
+- 💥 BREAKING: Remove support for custom Clusters from ElectrumNetworkProvider and added a configuration object to the constructor.
+- 💥 BREAKING: Remove support for old contracts compiled with CashScript v0.6.x or earlier.
+- 🐛 Fix bug where JestExtensions expect().toLog() would detect logs from different tests.
+- 🐛 Fix bug where certain edge cases in require statements caused the FailedRequireError message to be slightly different from the original error message.
+https://x.com/CashScriptBCH/status/1935662184865890325
+
+### @cashscript/utils
+
+- 💥 BREAKING: Remove importArtifact and exportArtifact helper functions. If you want to import or export artifacts, use 'fs' to read and write files directly.
+
 ## v0.10.5
 
 ### cashc compiler

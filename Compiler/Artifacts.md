@@ -2,13 +2,13 @@
 
 Compiled contracts can be represented by so-called artifacts. These artifacts contain all information that is needed to interact with the smart contracts on-chain. Artifacts are stored in ``.json`` (or ``.ts``) files so they can be shared and stored for later usage without having to recompile the contract.
 
->Did you know?
+>**DID YOU KNOW?**
 >
 >Artifacts allow any third-party SDKs to be developed, since these SDKs only need to import and use an artifact file, while the compilation of the contract is left to the official ``cashc`` compiler.
 
 ## Artifact specification
 
-```typescript
+```javascript
 interface Artifact {
   contractName: string // Contract name
   constructorInputs: AbiInput[] // Arguments required to instantiate a contract
@@ -41,10 +41,17 @@ interface AbiFunction {
 interface LogEntry {
   ip: number; // instruction pointer
   line: number; // line in the source code
-  data: Array<{ stackIndex: number, type: string } | string>; // data to be logged
+  data: Array<StackItem | string>; // data to be logged
 }
 
-interface RequireMessage {
+interface StackItem {
+  type: string; // Type of the variable
+  stackIndex: number; // Index of the variable on the stack
+  ip: number; // Instruction pointer at which we can access the logged variable
+  transformations?: string; // Transformations needed to obtain the logged item
+}
+
+interface RequireStatement {
   ip: number; // instruction pointer
   line: number; // line in the source code
   message: string; // custom message for failing `require` statement

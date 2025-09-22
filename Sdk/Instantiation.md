@@ -8,7 +8,7 @@ Before interacting with a smart contract on the BCH network, the CashScript SDK 
 
 ## Creating a Contract
 
-The ``Contract`` class is used to represent a CashScript contract in a JavaScript object. These objects can be used to retrieve information such as the contract's address and balance. They can also be used to interact with the contract by calling the contract's functions.
+The ``Contract`` class is used to represent a CashScript contract in a JavaScript object. These objects can be used to retrieve information such as the contract's address and balance. Contract objects can be used to interact with the contract by generating an ``Unlocker`` by calling the contract's unlocker functions.
 
 ### Constructor
 
@@ -23,9 +23,9 @@ new Contract(
 )
 ```
 
-A CashScript contract can be instantiated by providing an ``Artifact`` object, a list of constructor arguments, and optionally an options object configuring NetworkProvider and addressType.
+A CashScript contract can be instantiated by providing an ``Artifact`` object, a list of constructor arguments, and optionally an options object configuring ``NetworkProvider`` and ``addressType``.
 
-An Artifact object is the result of compiling a CashScript contract. Compilation can be done using the standalone ``cashc`` CLI or programmatically with the cashc NPM package (see [CashScript Compiler](/Compiler/Compiler.md#javascript-compilation)). If compilation is done using the ``cashc`` CLI with the ``--format ts`` option, you will get explicit types and type checking for the constructor arguments and function arguments.
+An ``Artifact`` object is the result of compiling a CashScript contract. Compilation can be done using the standalone ``cashc`` [CLI](/Compiler/Compiler.md) or programmatically with the ``cashc`` NPM package (see [CashScript Compiler](/Compiler/Compiler.md#javascript-compilation)). If compilation is done using the ``cashc`` CLI with the ``--format ts`` option, you will get explicit types and type checking for the constructor arguments and function arguments.
 
 The ``NetworkProvider`` option is used to manage network operations for the CashScript contract. By default, a mainnet ``ElectrumNetworkProvider`` is used, but the network providers can be configured. See the docs on [NetworkProvider](/TypeScriptSDK/NetworkProvider.md).
 
@@ -37,7 +37,7 @@ The ``addressType`` option is used to choose between a ``p2sh20`` and ``p2sh32``
 
 #### Example
 
-```typescript
+```javascript
 import { Contract, ElectrumNetworkProvider } from 'cashscript';
 import { compileFile } from 'cashc';
 
@@ -47,14 +47,12 @@ import P2PKH from './p2pkh.json' with { type: 'json' };
 // Or compile a contract file
 const P2PKH = compileFile(new URL('p2pkh.cash', import.meta.url));
 
-const provider = new ElectrumNetworkProvider('chipnet');
-const addressType = 'p2sh20';
 const contractArguments = [alicePkh]
-const options = { provider, addressType}
+
+const provider = new ElectrumNetworkProvider('chipnet');
+const options = { provider, addressType: 'p2sh20' }
 const contract = new Contract(P2PKH, contractArguments, options);
 ```
-
-### TypeScript Typings
 
 ## Contract Properties
 
@@ -67,7 +65,7 @@ A contract's regular address (without token-support) can be retrieved through th
 
 >**NOTE**
 >
->Wallets will not allow you to send CashTokens to this address. For that you must use the tokenAddress below. Wallets which have not upgraded might not recognize this new address type.
+>Wallets will not allow you to send CashTokens to this address. For that you must use the [tokenAddress](#tokenaddress) below. Wallets which have not upgraded might not recognize this new address type.
 
 #### Example
 
@@ -89,34 +87,6 @@ A contract's token-supporting address can be retrieved through the ``tokenAddres
 console.log(contract.tokenAddress)
 ```
 
-### opcount
-
-```typescript
-contract.opcount: number
-```
-
-The number of opcodes in the contract's bytecode can be retrieved through the ``opcount`` member field. This is useful to ensure that the contract is not too big, since Bitcoin Cash smart contracts can contain a maximum of 201 opcodes.
-
-#### Example
-
-```typescript
-assert(contract.opcount <= 201)
-```
-
-### bytesize
-
-```typescript
-contract.bytesize: number
-```
-
-The size of the contract's bytecode in bytes can be retrieved through the ``bytesize`` member field. This is useful to ensure that the contract is not too big, since Bitcoin Cash smart contracts can be 520 bytes at most.
-
-#### Example
-
-```typescript
-console.log(contract.bytesize)
-```
-
 ### bytecode
 
 ```typescript
@@ -131,6 +101,39 @@ Returns the contract's redeem script encoded as a hex string.
 console.log(contract.bytecode)
 ```
 
+### bytesize
+
+```typescript
+contract.bytesize: number
+```
+
+The size of the contract's bytecode in bytes can be retrieved through the ``bytesize`` member field. This is useful to ensure that the contract is not too big, since Bitcoin Cash smart contracts can be 1650 bytes at most.
+
+>**TIP**
+>
+>Using ``contract.bytesize`` is the best way to get the size of contract bytecode, as it includes the constructor arguments. The size outputs of the ``cashc`` compiler are based on the bytecode without constructor arguments so are always an underestimate.
+
+#### Example
+
+```javascript
+// make sure the contract bytesize is within standardness limits
+assert(contract.bytesize <= 1650)
+```
+
+### opcount
+
+```typescript
+contract.opcount: number
+```
+
+The number of opcodes in the contract's bytecode can be retrieved through the ``opcount`` member field.
+
+#### Example
+
+```javascript
+console.log(contract.opcount)
+```
+
 ## Contract Methods
 
 ### getBalance()
@@ -143,13 +146,13 @@ Returns the total balance of the contract in satoshis. Both confirmed and unconf
 
 #### Example
 
-```typescript
+```javascript
 const contractBalance = await contract.getBalance()
 ```
 
 ### getUtxos()
 
-```typescript
+```javascript
 async contract.getUtxos(): Promise<Utxo[]>
 ```
 
@@ -167,49 +170,30 @@ interface Utxo {
 
 #### Example
 
-```typescript
+```javascript
 const utxos = await contract.getUtxos()
 ```
 
-### Contract functions
-
-```typescript
-contract.functions.<functionName>(...args: FunctionArgument[]): Transaction
-```
-
-Once a smart contract has been instantiated, you can invoke a contract function to spend from the contract with the '[Simple transaction-builder](/Sdk/Transactions.md)' by calling the function name under the ``functions`` member field of a contract object. To call these functions successfully, the provided parameters must match the function signature defined in the CashScript code.
-
-These contract functions return an incomplete ``Transaction`` object, which needs to be completed by providing outputs of the transaction. For more information see the [Simple transaction-builder](/Sdk/Transactions.md) page.
-
-#### Example
-
-```typescript
-import { alice } from './somewhere';
-
-const tx = await contract.functions
-  .transfer(new SignatureTemplate(alice))
-  .to('bitcoincash:qrhea03074073ff3zv9whh0nggxc7k03ssh8jv9mkx', 10000n)
-  .send()
-```
-
->**TIP**
->
->If the contract artifact is generated using the ``cashc`` CLI with the ``--format ts`` option, you will get explicit types and type checking for the function name and arguments.
-
 ### Contract unlockers
 
-```Typescript
+```javascript
 contract.unlock.<functionName>(...args: FunctionArgument[]): Unlocker
 ```
 
-Once a smart contract has been instantiated, you can invoke a contract function on a smart contract UTXO to use the '[Advanced transaction-builder](/Sdk/TransactionsAdvanced.md)' by calling the function name under the ``unlock`` member field of a contract object. To call these functions successfully, the provided parameters must match the function signature defined in the CashScript code.
+Once a smart contract has been instantiated, you can invoke a contract function on a smart contract UTXO to use the '[Transaction Builder](/Sdk/TransactionBuilder.md)' by calling the function name under the ``unlock`` member field of a contract object. To call these functions successfully, the provided parameters must match the function signature defined in the CashScript code.
 
-These contract functions return an incomplete ``transactionBuilder`` object, which needs to be completed by providing outputs of the transaction. For more information see the [Advanced transaction-builder](/Sdk/TransactionsAdvanced.md) page.
+These contract functions return an incomplete ``transactionBuilder`` object, which needs to be completed by providing outputs of the transaction. For more information see the [transaction-builder](/Sdk/TransactionBuilder.md) page.
 
-```Typescript
+#### Example
+
+```javascript
 import { contract, transactionBuilder } from './somewhere.js';
 
 const contractUtxos = await contract.getUtxos();
 
 transactionBuilder.addInput(contractUtxos[0], contract.unlock.spend());
 ```
+
+>**TIP**
+>
+>If the contract artifact is generated using the ``cashc`` CLI with the ``--format ts`` option, you will get explicit types and type checking for the function name and arguments.

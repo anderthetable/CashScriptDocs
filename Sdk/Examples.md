@@ -21,7 +21,7 @@ To put the ``HodlVault.cash`` contract to use in a TypeScript application, we ha
 
 ##### common.ts
 
-```Typescript
+```javascript
 import { hash160 } from '@cashscript/utils';
 import {
   deriveHdPrivateNodeFromSeed,
@@ -61,7 +61,7 @@ For the networkprovider, we'll use the ``ElectrumNetworkProvider`` from the SDK 
 
 ##### hodl_vault.ts
 
-```Typescript
+```javascript
 import { stringify } from '@bitauth/libauth';
 import { Contract, SignatureTemplate, ElectrumNetworkProvider } from 'cashscript';
 import { compileFile } from 'cashc';
@@ -95,7 +95,7 @@ We need the create the functionality for generating and signing the oracle messa
 
 ##### PriceOracle.ts
 
-```Typescript
+```javascript
 import { padMinimallyEncodedVmNumber, flattenBinArray, secp256k1 } from '@bitauth/libauth';
 import { encodeInt, sha256 } from '@cashscript/utils';
 
@@ -124,7 +124,7 @@ Finally, we can put all of this together to create a working smart contract appl
 
 ##### hodl_vault.ts
 
-```Typescript
+```javascript
 import { stringify } from '@bitauth/libauth';
 import { Contract, SignatureTemplate, ElectrumNetworkProvider } from 'cashscript';
 import { compileFile } from 'cashc';
@@ -149,19 +149,35 @@ const provider = new ElectrumNetworkProvider('chipnet');
 const parameters = [alicePub, oraclePub, 100000n, 30000n];
 const contract = new Contract(artifact, parameters, { provider });
 
-// Get contract balance & output address + balance
+// Fetch contract utxos
+const contractUtxos = await contract.getUtxos();
+
+// Log contract output address + contract utxos
 console.log('contract address:', contract.address);
-console.log('contract balance:', await contract.getBalance());
+console.log('contract utxos', contractUtxos);
+
+// get current block height
+const currentBlockHeight = await provider.getBlockHeight()
 
 // Produce new oracle message and signature
 const oracleMessage = oracle.createMessage(100000n, 30000n);
 const oracleSignature = oracle.signMessage(oracleMessage);
 
+// Select a hodlvault utxo to spend from
+const selectedContractUtxo = contractUtxos[0]
+
+// Create the signatureTemplate for alice to sign the contract input
+const aliceSignatureTemplate = new SignatureTemplate(alicePriv)
+
 // Spend from the vault
-const tx = await contract.functions
-  .spend(new SignatureTemplate(alicePriv), oracleSignature, oracleMessage)
-  .to(contract.address, 1000n)
+const transferDetails = await new TransactionBuilder({ provider })
+  .addInput(selectedContractUtxo, contract.unlock.spend(aliceSignatureTemplate, oracleSignature, oracleMessage))
+  .addOutput({
+    to: contract.address,
+    amount: 1000n
+  })
+  .setLocktime(currentBlockHeight)
   .send();
 
-console.log(stringify(tx));
+console.log(transferDetails);
 ```

@@ -1,6 +1,6 @@
 # Language Grammar
 
-```typescript
+```javascript
 grammar CashScript;
 
 sourceFile
@@ -71,11 +71,11 @@ assignStatement
     ;
 
 timeOpStatement
-    : 'require' '(' TxVar '>=' expression (',' StringLiteral)? ')' ';'
+    : 'require' '(' TxVar '>=' expression (',' requireMessage)? ')' ';'
     ;
 
 requireStatement
-    : 'require' '(' expression (',' StringLiteral)? ')' ';'
+    : 'require' '(' expression (',' requireMessage)? ')' ';'
     ;
 
 ifStatement
@@ -86,12 +86,13 @@ consoleStatement
     : 'console.log' consoleParameterList ';'
     ;
 
+requireMessage
+    : StringLiteral
+    ;
+
 consoleParameter
     : Identifier
-    | StringLiteral
-    | NumberLiteral
-    | HexLiteral
-    | BooleanLiteral
+    | literal
     ;
 
 consoleParameterList
@@ -116,6 +117,7 @@ expression
     | scope='tx.inputs' '[' expression ']' op=('.value' | '.lockingBytecode' | '.outpointTransactionHash' | '.outpointIndex' | '.unlockingBytecode' | '.sequenceNumber' | '.tokenCategory' | '.nftCommitment' | '.tokenAmount') # UnaryIntrospectionOp
     | expression op=('.reverse()' | '.length') # UnaryOp
     | left=expression op='.split' '(' right=expression ')' # BinaryOp
+    | element=expression '.slice' '(' start=expression ',' end=expression ')' # Slice
     | op=('!' | '-') expression # UnaryOp
     | left=expression op=('*' | '/' | '%') right=expression # BinaryOp
     | left=expression op=('+' | '-') right=expression # BinaryOp
@@ -167,7 +169,15 @@ NumberUnit
     ;
 
 NumberLiteral
-    : [-]?[0-9]+ ([eE] [0-9]+)?
+    : '-'? NumberPart ExponentPart?
+    ;
+
+NumberPart
+    : [0-9]+ ('_' [0-9]+)*
+    ;
+
+ExponentPart
+    : [eE] NumberPart
     ;
 
 Bytes
@@ -192,7 +202,7 @@ HexLiteral
     ;
 
 TxVar
-    : 'tx.age'
+    : 'this.age'
     | 'tx.time'
     ;
 

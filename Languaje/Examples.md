@@ -1,6 +1,6 @@
 # Examples
 
-An extensive collection of examples is available in the [GitHub repository](https://github.com/CashScript/cashscript/tree/master/examples). Below we discuss a few of these examples in more details and go through their functionality. This example page focuses on the CashScript syntax, while the SDK Examples page in the SDK section focuses on use of the SDK to build an application.
+An extensive collection of examples is available in the [GitHub repository](https://github.com/CashScript/cashscript/tree/master/examples). Below we discuss a few of these examples in more details and go through their functionality. This example page focuses on the CashScript syntax, while the [SDK Examples page](/Sdk/Examples.md) in the SDK section focuses on use of the SDK to build an application.
 
 ## HodlVault
 
@@ -8,10 +8,10 @@ For better or worse, HODLing and waiting for price increases is one of the main 
 
 This smart contract works by connecting with a price oracle. This price oracle is a trusted entity that publishes the BCH/USD price every block. This price is passed into the contract, and only if the price is higher than your target price, you can spend the coins.
 
-This involves some degree of trust in the price oracle, but since the oracle produces price data for everyone to use, their incentive to *attack your* smart contract is minimised. To improve this situation, you can also choose to connect with multiple oracle providers so you do not have to trust a single party.
+This involves some degree of trust in the price oracle, but since the oracle produces price data for everyone to use, their incentive to attack *your* smart contract is minimised. To improve this situation, you can also choose to connect with multiple oracle providers so you do not have to trust a single party.
 
-```typescript 
-pragma cashscript ^0.10.0;
+```javascript 
+pragma cashscript ^0.11.0;
 
 // A minimum block is provided to ensure that oracle price entries from before
 // this block are disregarded. i.e. when the BCH price was $1000 in the past,
@@ -41,22 +41,22 @@ contract HodlVault(pubkey ownerPk, pubkey oraclePk, int minBlock, int priceTarge
 }
 ```
 
-For how to put the HodlVault contract to use in a Typescript application, see the SDK examples page.
+For how to put the HodlVault contract to use in a Typescript application, see the [SDK examples page](/Sdk/Examples#hodlvault).
 
 ## Licho's Mecenas
 
 Donations are a great way to support the projects you love, and periodic donations can incentivise continuous improvement to the product. But platforms like Patreon generally take fees of 10%+ and don't accept cryptocurrencies. Instead you can create a peer-to-peer smart contract that allows a recipient to withdraw a specific amount every month.
 
-The contract works by checking that a UTXO is at least 30 days old, after which it uses a covenant to enforce that the ``pledge`` amount is sent to the recipient, while the remainder is sent back to the contract itself. By sending it back, the ``tx.age`` counter is effectively reset, meaning this process can only be repeated when another 30 days have past.
+The contract works by checking that a UTXO is at least 30 days old, after which it uses a covenant to enforce that the ``pledge`` amount is sent to the recipient, while the remainder is sent back to the contract itself. By sending it back, the ``this.age`` counter is effectively reset, meaning this process can only be repeated when another 30 days have past.
 
 Due to the nature of covenants, we have to be very specific about the outputs (amounts and destinations) of the transaction. This also means that we have to account for the special case where the remaining contract balance is lower than the ``pledge`` amount, meaning no remainder should be sent back. Finally, we have to account for a small fee that has to be taken from the contract's balance to pay the miners.
 
-```typescript
-pragma cashscript ^0.10.0;
+```javascript
+pragma cashscript ^0.11.0;
 
 contract Mecenas(bytes20 recipient, bytes20 funder, int pledge, int period) {
     function receive() {
-        require(tx.age >= period);
+        require(this.age >= period);
 
         // Check that the first output sends to the recipient
         bytes25 recipientLockingBytecode = new LockingBytecodeP2PKH(recipient);
@@ -91,10 +91,10 @@ contract Mecenas(bytes20 recipient, bytes20 funder, int pledge, int period) {
 
 AMM DEX contract based on [the Cauldron DEX contract](https://www.cauldron.quest/_files/ugd/ae85be_b1dc04d2b6b94ab5a200e3d8cd197aa3.pdf), you can read more details about the contract design there.
 
-Compared to the manually written and hand-optimized opcodes version of the contract, the CashScript compiled bytecode has just 5 extra opcodes overhead (7 extra bytes).
+The CashScript contract code has the big advantage of abstracting away any stack management, having variable names, explicit types and a logical order of operations (compared to the 'reverse Polish notation' of raw script).
 
-```typescript
-pragma cashscript ^0.10.0;
+```javascript
+pragma cashscript ^0.11.0;
 
 contract DexContract(bytes20 poolOwnerPkh) {
     function swap() {
@@ -133,5 +133,7 @@ contract DexContract(bytes20 poolOwnerPkh) {
     }
 }
 ```
+
+Compared to the manually written and hand-optimized opcodes version of the contract, the CashScript compiled bytecode has just 5 extra opcodes overhead (7 extra bytes). Furthermore, even contracts with hand-optimized bytecode can still be used with the CashScript SDK, [find out more in the optimization guide](/Guides/Optimization#hand-optimizing-bytecode).
 
 More advanced examples on covenants, using NFTs to keep local state and issuing NFTs as receipts can be found in the [Covenants & Introspection Guide](/Guides/Covenants.md).

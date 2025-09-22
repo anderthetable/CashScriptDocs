@@ -1,6 +1,10 @@
 # Signature Templates
 
-When a contract function has a ``sig`` parameter, it needs a cryptographic signature from a private key for the spending transaction. In place of a signature, a ``SignatureTemplate`` can be passed, which will automatically generate the correct signature once the transaction is built.
+When a contract function has a ``sig`` parameter, it needs a cryptographic signature from a private key for the spending transaction. In place of a signature, a ``SignatureTemplate`` can be passed, which will generate the correct signature when the transaction is built.
+
+>**TIP**
+>
+>``SignatureTemplate`` can be used with a ``Contract`` as function argument to generate a signature automatically, or can be used in the ``TransactionBuilder`` to create an ``Unlocker`` for a P2PKH UTXO.
 
 ## SignatureTemplate
 
@@ -14,21 +18,58 @@ new SignatureTemplate(
 )
 ```
 
-In place of a signature, a ``SignatureTemplate`` can be passed, which will automatically generate the correct signature using the ``signer`` parameter. This signer can be any representation of a private key, including [BCHJS' ECPair](https://bchjs.fullstack.cash/#api-ECPair), [bitcore-lib-cash'](https://github.com/bitpay/bitcore/blob/master/packages/bitcore-lib-cash/docs/privatekey.md) [PrivateKey](https://github.com/bitpay/bitcore/blob/master/packages/bitcore-lib-cash/docs/privatekey.md), [WIF strings](https://en.bitcoin.it/wiki/Wallet_import_format), or raw private key buffers. This ensures that any BCH library can be used.
+In place of a signature, a ``SignatureTemplate`` can be passed, which will automatically generate the correct signature using the ``signer`` parameter. This signer can be any representation of a private key, including [WIF strings](https://en.bitcoin.it/wiki/Wallet_import_format), [BCHJS' ``ECPair``](https://bchjs.fullstack.cash/#api-ECPair), [bitcore-lib-cash'](https://github.com/bitpay/bitcore/blob/master/packages/bitcore-lib-cash/docs/privatekey.md) [PrivateKey](https://github.com/bitpay/bitcore/blob/master/packages/bitcore-lib-cash/docs/privatekey.md), or binary private keys represented as ``Uint8Array``. This ensures that ``SignatureTemplate`` can be used with any BCH library.
 
 #### Example
 
-```Typescript
+```javascript
 const aliceWif = 'L4vmKsStbQaCvaKPnCzdRArZgdAxTqVx8vjMGLW5nHtWdRguiRi1';
 const aliceSignatureTemplate = new SignatureTemplate(aliceWif)
 
-const tx = await contract.functions
-  .transfer(aliceSignatureTemplate)
-  .to('bitcoincash:qrhea03074073ff3zv9whh0nggxc7k03ssh8jv9mkx', 10000n)
-  .send()
+const transferDetails = await new TransactionBuilder({ provider })
+  .addInput(selectedContractUtxo, contract.unlock.transfer(aliceSignatureTemplate))
+  .addOutput({
+    to: 'bitcoincash:qrhea03074073ff3zv9whh0nggxc7k03ssh8jv9mkx',
+    amount: 10000n
+  })
+  .send();
+```
+The ``hashtype`` and ``signatureAlgorithm`` options are covered under '[Advanced Usage](/Sdk/TransactionsAdvanced.md)'.
+
+## SignatureTemplate Methods
+
+### unlockP2PKH()
+
+Importantly the ``SignatureTemplate`` can also be used to generate the ``Unlocker`` for a P2PKH UTXO in the following way:
+
+```javascript
+signatureTemplate.unlockP2PKH(): Unlocker
 ```
 
-The ``hashtype`` and ``signatureAlgorithm`` options are covered under '[Advanced Usage](/Sdk/TransactionsAdvanced.md)'.
+#### Example
+
+```javascript
+import { aliceTemplate, aliceAddress, transactionBuilder } from './somewhere.js';
+
+const aliceUtxos = await provider.getUtxos(aliceAddress);
+transactionBuilder.addInput(aliceUtxos[0], aliceTemplate.unlockP2PKH());
+```
+
+### getPublicKey()
+
+The ``SignatureTemplate`` also had a helper method to get the matching PublicKey in the following way:
+
+```javascript
+signatureTemplate.getPublicKey(): Uint8Array
+```
+
+#### Example
+
+```javascript
+import { aliceTemplate } from './somewhere.js';
+
+const alicePublicKey = aliceTemplate.getPublicKey()
+```
 
 ## Advanced Usage
 
@@ -36,7 +77,7 @@ The ``hashtype`` and ``signatureAlgorithm`` options are covered under '[Advanced
 
 The default ``hashtype`` is ``HashType.SIGHASH_ALL | HashType.SIGHASH_UTXOS`` because this is the most secure option for smart contract use cases.
 
-```Typescript
+```javascript
 export enum HashType {
   SIGHASH_ALL = 0x01,
   SIGHASH_NONE = 0x02,
@@ -46,25 +87,23 @@ export enum HashType {
 }
 ```
 
->**NOTE**
->
->If you're using "old-style" covenants (using CashScript v0.6.0 or lower), you need to configure ``HashType.SIGHASH_ALL`` as the ``hashtype`` parameter for the SignatureTemplate.
-
 #### Example
 
-```Typescript
+```javascript
 const wif = 'L4vmKsStbQaCvaKPnCzdRArZgdAxTqVx8vjMGLW5nHtWdRguiRi1';
 
 const signatureTemplate = new SignatureTemplate(
   wif, HashType.SIGHASH_ALL | HashType.SIGHASH_UTXOS
 );
+
+const configuredHashType = signatureTemplate.getHashType()
 ```
 
 ## SignatureAlgorithm
 
 The ``signatureAlgorithm`` parameter determines the cryptographic algorithm used for signing. By default, the modern and compact Schnorr algorithm is used.
 
-```Typescript
+```javascript
 export enum SignatureAlgorithm {
   ECDSA = 0x00,
   SCHNORR = 0x01,
@@ -72,10 +111,12 @@ export enum SignatureAlgorithm {
 ```
 #### Example
 
-```Typescript
+```javascript
 const wif = 'L4vmKsStbQaCvaKPnCzdRArZgdAxTqVx8vjMGLW5nHtWdRguiRi1';
 
 const hashType = HashType.SIGHASH_ALL | HashType.SIGHASH_UTXOS
 const signatureAlgorithm = SignatureAlgorithm.SCHNORR
 const signatureTemplate = new SignatureTemplate(wif, hashType,signatureAlgorithm);
+
+const configuredSignatureAlgorithm = signatureTemplate.getSignatureAlgorithm()
 ```

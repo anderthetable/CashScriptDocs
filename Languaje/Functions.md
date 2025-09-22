@@ -8,25 +8,25 @@ CashScript has several built-in functions for things like cryptographic and arit
 
 ``int abs(int a)``
 
-Returns the absolute value of argument a.
+Returns the absolute value of argument ``a``.
 
 ### min()
 
 ``int min(int a, int b)``
 
-Returns the minimum value of arguments a and b.
+Returns the minimum value of arguments ``a`` and ``b``.
 
 ### max()
 
 ``int max(int a, int b)``
 
-Returns the maximum value of arguments a and b.
+Returns the maximum value of arguments ``a`` and ``b``.
 
 ### within()
 
 ``bool within(int x, int lower, int upper)``
 
-Returns true if and only if x >= lower && x < upper.
+Returns ``true`` if and only if ``x >= lower && x < upper``.
 
 ## Hashing functions
 
@@ -34,43 +34,47 @@ Returns true if and only if x >= lower && x < upper.
 
 ``bytes20 ripemd160(any x)``
 
-Returns the RIPEMD-160 hash of argument x.
+Returns the RIPEMD-160 hash of argument ``x``.
 
 ### sha1()
 
 ``bytes20 sha1(any x)``
 
-Returns the SHA-1 hash of argument x.
+Returns the SHA-1 hash of argument ``x``.
 
 ### sha256()
 
 ``bytes32 sha256(any x)``
 
-Returns the SHA-256 hash of argument x.
+Returns the SHA-256 hash of argument ``x``.
 
 ### hash160()
 
 ``bytes20 hash160(any x)``
 
-Returns the RIPEMD-160 hash of the SHA-256 hash of argument x.
+Returns the RIPEMD-160 hash of the SHA-256 hash of argument ``x``.
 
 ### hash256()
 
 ``bytes32 hash256(any x)``
 
-Returns the double SHA-256 hash of argument x.
+Returns the double SHA-256 hash of argument ``x``.
 
 ## Signature checking functions
 
 >**CAUTION**
 >
->All signature checking functions must comply with the NULLFAIL rule. This means that if you want to use the output of a signature check inside the condition of an if-statement, the input signature needs to either be correct, or an empty byte array. When you use an incorrect signature as an input, the script will fail.
+>All signature checking functions must comply with the [NULLFAIL]() rule which only allows ``0x`` as an invalid signature — any other invalid signature will **immediately fail** the entire script.
+
+#### Nullfail example
+
+The ``NULLFAIL`` rule means passing an invalid signature to ``checkSig()`` does not return ``false`` — it fails the script. To safely return ``false`` on a signature check, use an empty ``0x`` signature instead, as shown below:
 
 ### checkSig()
 
 ``bool checksig(sig s, pubkey pk)``
 
-Checks that transaction signature s is valid for the current transaction and matches with public key pk.
+Checks that transaction signature ``s`` is valid for the current transaction and matches with public key ``pk``.
 
 ### checkMultiSig()
 
@@ -85,4 +89,4 @@ Performs a multi-signature check using a list of transaction signatures and publ
 
 ``bool checkDataSig(datasig s, bytes msg, pubkey pk)``
 
-Checks that sig s is a valid signature for message msg and matches with public key pk.
+Checks that sig ``s`` is a valid signature for message ``msg`` and matches with public key ``pk``.

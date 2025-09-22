@@ -27,12 +27,25 @@ The cashc CLI tool can be used to compile ``.cash`` files to JSON (or ``.ts``) a
   -c, --opcount          Display the number of opcodes in the compiled bytecode.  
   -s, --size             Display the size in bytes of the compiled bytecode.  
   -f, --format &lt;format&gt;  Specify the format of the output. (choices: "json", "ts", default: "json")  
-
   -?, --help             Display help
 
 >**TIP**
 >
 >To have the best TypeScript integration, we recommend generating the artifact in the ``.ts`` format and importing it into your TypeScript project from that ``.ts`` file.
+
+#### Example
+
+```bash
+cashc ./Contract.cash --output ./artifact.ts --format ts
+```
+
+```bash
+cashc ./Contract.cash --size --opcount
+```
+
+>**INFO**
+>
+>The size outputs of the cashc compiler are based on the bytecode without constructor arguments. This means they are always an underestimate, as the contract hasn't been initialized with contract arguments.
 
 ## JavaScript Compilation
 
@@ -48,11 +61,15 @@ npm install cashc
 compileFile(sourceFile: PathLike): Artifact
 ```
 
-Compiles a CashScript contract from a source file. This is the recommended compile method if you're using Node.js and you have a source file available.
+Compiles a CashScript contract from a source file. This compile method is handy when using Node.js with the contract source file available but you are doing quick compilations (for example for contract size comparisons) and you don't need the contract artifact file to be generated.
+
+>**NOTE**
+>
+>``compileFile()`` only works from a Node.js context because it uses the file-system so it's not available in browser setting.
 
 #### Example
 
-```typescript
+```javascript
 const P2PKH = compileFile(new URL('p2pkh.cash', import.meta.url));
 ```
 
@@ -62,9 +79,9 @@ const P2PKH = compileFile(new URL('p2pkh.cash', import.meta.url));
 compileString(sourceCode: string): Artifact
 ```
 
-Compiles a CashScript contract from a source code string. This is the recommended compile method if you're building a webapp, because ``compileFile()`` only works from a Node.js context. This is also the recommended method if no source file is locally available (e.g. the source code is retrieved with a REST API).
+Compiles a CashScript contract from a source code string. This compile method is handy in a browser compilation setting like the [CashScript Playground](https://playground.cashscript.org/) where testing contracts can be quickly compiled and discarded. The method is also useful if no source file is locally available (e.g. the source code is retrieved with a REST API).
 
-```typescript
+```javascript
 const baseUrl = 'https://raw.githubusercontent.com/CashScript/cashscript'
 const result = await fetch(`${baseUrl}/master/examples/p2pkh.cash`);
 const source = await result.text();

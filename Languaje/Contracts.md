@@ -13,23 +13,31 @@ A contract file may start with a pragma directive to indicate the CashScript ver
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 pragma cashscript >= 0.7.0 < 0.9.3;
 ```
 
 ## Constructor
 
-A CashScript constructor works slightly differently than what you might be used to in regular object-oriented languages. It is not possible to define any statements inside the constructor, as the ``constructor`` is only used to store values in the contract. Because of this limited nature, there is no separate constructor function, but instead the parameters are specified directly on the class definition.
+A CashScript constructor works slightly differently than what you might be used to in regular object-oriented languages. It is not possible to define any statements inside the constructor, as the constructor is only used to store values in the contract. Because of this limited nature, there is no separate ``constructor`` function, but instead the parameters are specified directly on the class definition.
 
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 
 contract HTLC(pubkey sender, pubkey recipient, int expiration, bytes32 hash) {
     ...
 }
 ```
+
+### Constructor Arguments
+
+The constructor arguments are provided when initializing a specific instance of a smart contract. The provided constructor arguments are added to the start of the contract's script before the opcode logic. Because the constructor arguments are part of the full smart contract script, they are conceptually similar to hard-coded constants in your contract logic. Constructor arguments are a way to create 'global constants' accessible from different functions inside your contract.
+
+>**INFO**
+>
+>The typings for the constructor arguments are only semantic and used when initializing the contract with the SDK. This means when not using the SDK you could still pass a different byte length item to ``bytes32 hash``.
 
 >**NOTE**
 >
@@ -37,12 +45,12 @@ contract HTLC(pubkey sender, pubkey recipient, int expiration, bytes32 hash) {
 
 ## Functions
 
-The main construct in a CashScript contract is the function. A contract can contain one or multiple functions that can be executed to trigger transactions that spend money from the contract. At its core, the result of a function is just a yes or no answer to the question 'Can money be sent out of this contract?'. However, by using a technique called covenants, it's possible to specify additional conditions — like restricting where money can be sent. To read more about this technique, refer to the [CashScript Covenants Guide](/Guides/Covenants.md).
+The main construct in a CashScript contract is the function. A contract can contain one or multiple functions that can be executed to trigger transactions that spend money from the contract. At its core, the result of a function is just a yes or no answer to the question 'Can money be sent out of this contract?'. However, by using 'covenants it's possible to specify additional conditions — like restricting where money can be sent. To learn more about covenants, refer to the [CashScript Covenants Guide](/Guides/Covenants.md).
 
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 
 contract TransferWithTimeout(pubkey sender, pubkey recipient, int timeout) {
     function transfer(sig recipientSig) {
@@ -54,6 +62,15 @@ contract TransferWithTimeout(pubkey sender, pubkey recipient, int timeout) {
     }
 }
 ```
+### Function Arguments
+
+The function arguments are provided when attempting to spend from the contract. This means that these arguments can be crafted in a specific way by anyone to see if they can exploit the contract logic. Because of this it is important to realize these are 'untrusted arguments'.
+
+In CashScript the types for the function arguments are **not** enforced automatically at the contract level. This can be especially relevant for types like ``bool``, ``bytesX`` and other semantic bytes types. Instead this type information is only used by the SDK to check whether these arguments match the expected type during transaction building.
+
+>**CAUTION**
+>
+>The typings for the function arguments are only semantic, this means the length of bounded bytes types like ``bytes20`` are ``not`` contract enforced automatically. Instead add an explicit length check ``require(item.length == 20)``.
 
 >**NOTE**
 >
@@ -76,7 +93,7 @@ The ``require`` statement can also take an optional error message as a second ar
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 
 contract P2PKH(bytes20 pkh) {
     function spend(pubkey pk, sig s) {
@@ -124,7 +141,7 @@ The only control structures in CashScript are ``if...else`` statements. This is 
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 
 contract OneOfTwo(bytes20 pkh1, bytes32 hash1, bytes20 pkh2, bytes32 hash2) {
     function spend(pubkey pk, sig s, bytes message) {
@@ -153,7 +170,7 @@ The ``console.log`` statement can be used to log values during debug evaluation 
 #### Example
 
 ```javascript
-pragma cashscript ^0.10.0;
+pragma cashscript ^0.11.0;
 
 contract P2PKH(bytes20 pkh) {
     function spend(pubkey pk, sig s) {
